@@ -1,19 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
-
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-}
-
-interface Chat {
-  id: string;
-  title: string;
-  messages: Message[];
-  isPinned: boolean;
-  createdAt: Date;
-}
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ThemeProvider } from 'styled-components';
+import { lightTheme, darkTheme } from '../styles/theme';
+import websocketService from '../services/websocket';
+import { Message, Chat } from '../types';
 
 interface ChatContextType {
   chats: Chat[];
@@ -25,6 +14,7 @@ interface ChatContextType {
   clearChats: () => void;
   toggleDarkMode: () => void;
   togglePinChat: (chatId: string) => void;
+  searchChats: (query: string) => Chat[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -38,11 +28,44 @@ export const useChat = () => {
 };
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<Chat[]>(() => {
+    // Load chats from localStorage on initial render
+    const savedChats = localStorage.getItem('chats');
+    return savedChats ? JSON.parse(savedChats) : [];
+  });
   const [activeChat, setActiveChat] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Load theme preference from localStorage
+    const savedTheme = localStorage.getItem('isDarkMode');
+    return savedTheme ? JSON.parse(savedTheme) : false;
+  });
 
-  const addChat = () => {
+  // Connect to WebSocket when the component mounts
+  useEffect(() => {
+    websocketService.connect();
+    const unsubscribe = websocketService.subscribe((message) => {
+      if (activeChat) {
+        addMessage(activeChat, message);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      websocketService.disconnect();
+    };
+  }, [activeChat]);
+
+  // Persist chats to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('chats', JSON.stringify(chats));
+  }, [chats]);
+
+  // Persist theme preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
+
+  const addChat = (): string => {
     const newChat: Chat = {
       id: Math.random().toString(36).substring(7),
       title: 'New Chat',
@@ -77,15 +100,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       newChats[chatIndex] = updatedChat;
       return newChats;
     });
+
+    // Send message through WebSocket if it's a user message
+    if (message.isUser) {
+      websocketService.send(message);
+    }
   };
 
   const clearChats = () => {
     setChats([]);
     setActiveChat(null);
+    localStorage.removeItem('chats');
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    setIsDarkMode((prev: boolean) => !prev);
   };
 
   const togglePinChat = (chatId: string) => {
@@ -104,6 +133,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const searchChats = (query: string) => {
+    if (!query) return chats;
+
+    const searchTerm = query.toLowerCase();
+    return chats.filter(chat => 
+      chat.title.toLowerCase().includes(searchTerm) ||
+      chat.messages.some(msg => msg.text.toLowerCase().includes(searchTerm))
+    );
+  };
+
   const value = {
     chats,
     activeChat,
@@ -114,13 +153,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearChats,
     toggleDarkMode,
     togglePinChat,
+    searchChats,
   };
 
   return (
     <ChatContext.Provider value={value}>
-      {children}
+      <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+        {children}
+      </ThemeProvider>
     </ChatContext.Provider>
   );
 };
 
-export default ChatContext; 
+export default ChatContext;

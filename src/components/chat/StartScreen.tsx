@@ -161,7 +161,14 @@ const ListItemText = styled.div`
   line-height: 1.5;
 `;
 
-const examples = [
+interface Example {
+  title: string;
+  description: string;
+  icon: React.ReactElement;
+  prompt: string;
+}
+
+const examples: Example[] = [
   {
     title: "Explain a code snippet",
     description: "Upload or paste code and get a detailed explanation of how it works, including best practices and potential improvements.",
@@ -316,13 +323,24 @@ const limitations = [
 ];
 
 const StartScreen: React.FC = () => {
-  const { addChat } = useChat();
+  const { addChat, addMessage } = useChat();
 
-  const handleExampleClick = (example: typeof examples[0]) => {
-    const newChat = addChat();
-    if (newChat) {
-      // Add initial message based on example
-      // This would be handled by the ChatContext
+  const handleExampleClick = (example: Example) => {
+    // Create a new chat and get its ID
+    const chatId = addChat();
+    
+    if (chatId) {
+      // Add the example prompt as the first message
+      addMessage(chatId, {
+        text: example.prompt,
+        isUser: true,
+      });
+
+      // Add a placeholder response to guide the user
+      addMessage(chatId, {
+        text: `I'll help you ${example.title.toLowerCase()}. Please provide the details you'd like me to work with.`,
+        isUser: false,
+      });
     }
   };
 
@@ -345,7 +363,11 @@ const StartScreen: React.FC = () => {
           </SectionTitle>
           <Grid>
             {examples.map((example, index) => (
-              <Card key={index} onClick={() => handleExampleClick(example)}>
+              <Card 
+                key={index} 
+                onClick={() => handleExampleClick(example)}
+                title={`Start a new chat: ${example.title}`}
+              >
                 {example.icon}
                 <CardTitle>{example.title}</CardTitle>
                 <CardDescription>{example.description}</CardDescription>

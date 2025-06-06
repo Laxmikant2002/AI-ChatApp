@@ -1,10 +1,18 @@
 import React from 'react';
 import styled from 'styled-components';
+import AnimatedTransition from '../common/AnimatedTransition';
+import FilePreview from './FilePreview';
+import { FileWithPreview } from '../../utils/fileUpload';
 
 interface MessageProps {
-  text: string;
-  isUser: boolean;
-  timestamp?: string;
+  message: {
+    text: string;
+    isUser: boolean;
+    timestamp?: Date;
+    type?: 'message' | 'error' | 'system';
+    file?: FileWithPreview;
+  };
+  isLoading?: boolean;
 }
 
 const MessageContainer = styled.div<{ $isUser: boolean }>`
@@ -12,60 +20,48 @@ const MessageContainer = styled.div<{ $isUser: boolean }>`
   flex-direction: column;
   align-items: ${props => props.$isUser ? 'flex-end' : 'flex-start'};
   max-width: 100%;
+  gap: 0.25rem;
 `;
 
-const MessageBubble = styled.div<{ $isUser: boolean }>`
-  background-color: ${props => props.$isUser ? '#2196f3' : '#f5f5f5'};
-  color: ${props => props.$isUser ? '#ffffff' : '#333333'};
-  padding: 0.75rem 1rem;
+const MessageContent = styled.div<{ $isUser: boolean }>`
+  background-color: ${props => props.$isUser ? props.theme.chat.userBubble : props.theme.chat.assistantBubble};
+  color: ${props => props.$isUser ? props.theme.chat.userText : props.theme.chat.assistantText};
+  padding: 1rem;
   border-radius: 1rem;
-  max-width: 80%;
-  font-size: var(--font-size-base);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
+  max-width: 70%;
+  word-wrap: break-word;
+  box-shadow: ${({ theme }) => theme.shadow.light};
 
   code {
-    font-family: var(--font-family-code);
-    font-size: var(--font-size-sm);
-    background-color: ${props => props.$isUser ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+    background-color: ${props => props.$isUser ? 'rgba(255, 255, 255, 0.1)' : props.theme.background.secondary};
     padding: 0.2em 0.4em;
-    border-radius: 0.3em;
+    border-radius: 0.25rem;
+    font-family: monospace;
   }
 `;
 
-const Avatar = styled.div<{ $isUser: boolean }>`
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background-color: ${props => props.$isUser ? '#1976d2' : '#10a37f'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-`;
-
-const Timestamp = styled.span`
-  font-size: var(--font-size-xs);
-  color: #666;
+const TimeStamp = styled.span<{ $isUser: boolean }>`
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.text.secondary};
   margin-top: 0.25rem;
 `;
 
-const Message: React.FC<MessageProps> = ({ text, isUser, timestamp }) => {
+const Message: React.FC<MessageProps> = ({ message, isLoading }) => {
   return (
-    <MessageContainer $isUser={isUser}>
-      <Avatar $isUser={isUser}>
-        {isUser ? 'U' : 'A'}
-      </Avatar>
-      <MessageBubble $isUser={isUser}>
-        {text}
-      </MessageBubble>
-      {timestamp && <Timestamp>{timestamp}</Timestamp>}
-    </MessageContainer>
+    <AnimatedTransition>
+      <MessageContainer $isUser={message.isUser}>
+        <MessageContent $isUser={message.isUser}>
+          {message.text}
+          {message.file && <FilePreview file={message.file} isUser={message.isUser} />}
+        </MessageContent>
+        {message.timestamp && (
+          <TimeStamp $isUser={message.isUser}>
+            {message.timestamp.toLocaleString()}
+          </TimeStamp>
+        )}
+      </MessageContainer>
+    </AnimatedTransition>
   );
 };
 
-export default Message; 
+export default Message;

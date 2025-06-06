@@ -7,14 +7,14 @@ const NavContainer = styled.nav`
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
+  background-color: ${({ theme }) => theme.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.border.primary};
   height: 60px;
 `;
 
 const Title = styled.h1`
   font-size: 1.25rem;
-  color: #353740;
+  color: ${({ theme }) => theme.text.primary};
   font-weight: 600;
   margin: 0;
 `;
@@ -30,7 +30,7 @@ const ActionButton = styled.button`
   border: none;
   padding: 0.5rem;
   cursor: pointer;
-  color: #6e6e80;
+  color: ${({ theme }) => theme.text.secondary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,8 +38,8 @@ const ActionButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #f5f5f5;
-    color: #2196f3;
+    background-color: ${({ theme }) => theme.background.secondary};
+    color: ${({ theme }) => theme.button.primary};
   }
 
   svg {

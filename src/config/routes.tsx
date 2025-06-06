@@ -3,7 +3,7 @@ import { RouteObject } from 'react-router-dom';
 import IndexPage from '../pages';
 import ChatPage from '../pages/chat/ChatInterface';
 import ErrorBoundary from '../components/error/ErrorBoundary';
-import Layout from '../layouts/Layout';
+import Layout from '../components/layout/Layout';
 
 export const routes: RouteObject[] = [
   {

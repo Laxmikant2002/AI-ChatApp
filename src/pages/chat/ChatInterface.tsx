@@ -139,14 +139,6 @@ const ChatInterface: React.FC = () => {
     console.log('File uploaded:', file);
     // Handle file upload logic here
   };
-
-  const formatTimestamp = (timestamp: Date): string => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
-  };
-
   if (!activeChat) {
     return <StartScreen />;
   }
@@ -157,12 +149,13 @@ const ChatInterface: React.FC = () => {
     <ChatContainer>
       <MessageList ref={messageListRef} onScroll={handleScroll}>
         <MessageWrapper>
-          {currentChat?.messages.map(message => (
-            <Message 
+          {currentChat?.messages.map(message => (            <Message 
               key={message.id}
-              text={message.text}
-              isUser={message.isUser}
-              timestamp={message.timestamp ? formatTimestamp(message.timestamp) : undefined}
+              message={{
+                text: message.text,
+                isUser: message.isUser,
+                timestamp: message.timestamp ? new Date(message.timestamp) : undefined
+              }}
             />
           ))}
         </MessageWrapper>

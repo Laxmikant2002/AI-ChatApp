@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { useChat } from '../../context/ChatContext';
 import { Chat } from '../../types';
@@ -6,8 +6,8 @@ import { Chat } from '../../types';
 const SidebarContainer = styled.aside<{ $isOpen: boolean }>`
   width: 260px;
   height: 100vh;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e5e5;
+  background-color: ${({ theme }) => theme.background.primary};
+  border-right: 1px solid ${({ theme }) => theme.border.primary};
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -20,7 +20,7 @@ const SidebarContainer = styled.aside<{ $isOpen: boolean }>`
     top: 0;
     z-index: 100;
     transform: translateX(${props => props.$isOpen ? '0' : '-100%'});
-    box-shadow: ${props => props.$isOpen ? '2px 0 8px rgba(0, 0, 0, 0.1)' : 'none'};
+    box-shadow: ${props => props.$isOpen ? `2px 0 8px ${props.theme.shadow.medium}` : 'none'};
   }
 
   &::-webkit-scrollbar {
@@ -32,7 +32,7 @@ const SidebarContainer = styled.aside<{ $isOpen: boolean }>`
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: ${({ theme }) => theme.border.primary};
     border-radius: 3px;
   }
 `;
@@ -43,8 +43,8 @@ const NewChatButton = styled.button`
   gap: 0.5rem;
   margin: 1rem;
   padding: 0.75rem 1rem;
-  background-color: #2196f3;
-  color: white;
+  background-color: ${({ theme }) => theme.button.primary};
+  color: ${({ theme }) => theme.text.primary};
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -54,7 +54,7 @@ const NewChatButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #1976d2;
+    background-color: ${({ theme }) => theme.button.primaryHover};
     transform: translateY(-1px);
   }
 
@@ -83,7 +83,7 @@ const Section = styled.div`
 const SectionTitle = styled.h2`
   font-size: 0.75rem;
   font-weight: 600;
-  color: #666;
+  color: ${({ theme }) => theme.text.secondary};
   text-transform: uppercase;
   padding: 0.5rem;
   margin-bottom: 0.25rem;
@@ -95,12 +95,12 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background-color: ${props => props.$isActive ? '#f0f0f0' : 'transparent'};
+  background-color: ${props => props.$isActive ? props.theme.background.secondary : 'transparent'};
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
   text-align: left;
-  color: #353740;
+  color: ${({ theme }) => theme.text.primary};
   font-size: 0.875rem;
   width: 100%;
   transition: all 0.2s ease;
@@ -108,7 +108,7 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
   overflow: hidden;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: ${({ theme }) => theme.background.secondary};
   }
 
   &::before {
@@ -118,7 +118,7 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
     top: 50%;
     height: 0;
     width: 3px;
-    background-color: #2196f3;
+    background-color: ${({ theme }) => theme.button.primary};
     transition: height 0.2s ease;
     transform: translateY(-50%);
   }
@@ -132,7 +132,7 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
   svg {
     width: 16px;
     height: 16px;
-    color: #6e6e80;
+    color: ${({ theme }) => theme.text.secondary};
     transition: transform 0.2s ease;
   }
 
@@ -143,12 +143,12 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
 
 const Divider = styled.div`
   height: 1px;
-  background-color: #e5e5e5;
+  background-color: ${({ theme }) => theme.border.primary};
   margin: 0.5rem 0;
 `;
 
 const SettingsButton = styled(ChatItem)`
-  color: #6e6e80;
+  color: ${({ theme }) => theme.text.secondary};
 `;
 
 const MobileOverlay = styled.div<{ $isVisible: boolean }>`
@@ -161,12 +161,61 @@ const MobileOverlay = styled.div<{ $isVisible: boolean }>`
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: ${({ theme }) => `${theme.background.primary}80`};
     opacity: ${props => props.$isVisible ? 1 : 0};
     visibility: ${props => props.$isVisible ? 'visible' : 'hidden'};
     transition: opacity 0.3s ease, visibility 0.3s ease;
     z-index: 99;
   }
+`;
+
+const SearchContainer = styled.div`
+  padding: 0.5rem 1rem;
+  position: relative;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 2.5rem;
+  background-color: ${({ theme }) => theme.background.secondary};
+  border: 1px solid ${({ theme }) => theme.border.primary};
+  border-radius: var(--radius-lg);
+  color: ${({ theme }) => theme.text.primary};
+  font-size: var(--font-size-sm);
+  transition: all ${({ theme }) => theme.animations.transition.base};
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.text.accent};
+    box-shadow: ${({ theme }) => theme.shadow.medium};
+  }
+
+  &::placeholder {
+    color: ${({ theme }) => theme.text.tertiary};
+  }
+`;
+
+const SearchIcon = styled.div`
+  position: absolute;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${({ theme }) => theme.text.secondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const NoResults = styled.div`
+  padding: 1rem;
+  text-align: center;
+  color: ${({ theme }) => theme.text.secondary};
+  font-size: var(--font-size-sm);
 `;
 
 interface SidebarProps {
@@ -182,8 +231,33 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     addChat, 
     clearChats,
     isDarkMode,
-    toggleDarkMode 
+    toggleDarkMode,
+    searchChats 
   } = useChat();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const filteredChats = useMemo(() => {
+    return searchChats(debouncedQuery);
+  }, [searchChats, debouncedQuery]);
+
+  const pinnedChats = useMemo(() => {
+    return filteredChats.filter(chat => chat.isPinned);
+  }, [filteredChats]);
+
+  const recentChats = useMemo(() => {
+    return filteredChats.filter(chat => !chat.isPinned);
+  }, [filteredChats]);
 
   const handleChatClick = (chatId: string) => {
     setActiveChat(chatId);
@@ -205,37 +279,62 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           New chat
         </NewChatButton>
 
-        <Section>
-          <SectionTitle>Pinned Chats</SectionTitle>
-          {chats.filter((chat: Chat) => chat.isPinned).map((chat: Chat) => (
-            <ChatItem
-              key={chat.id}
-              $isActive={activeChat === chat.id}
-              onClick={() => handleChatClick(chat.id)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              {chat.title}
-            </ChatItem>
-          ))}
-        </Section>
+        <SearchContainer>
+          <SearchIcon>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </SearchIcon>
+          <SearchInput
+            type="text"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </SearchContainer>
 
-        <Section>
-          <SectionTitle>Recent Chats</SectionTitle>
-          {chats.filter((chat: Chat) => !chat.isPinned).map((chat: Chat) => (
-            <ChatItem
-              key={chat.id}
-              $isActive={activeChat === chat.id}
-              onClick={() => handleChatClick(chat.id)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              {chat.title}
-            </ChatItem>
-          ))}
-        </Section>
+        {filteredChats.length === 0 ? (
+          <NoResults>No chats found</NoResults>
+        ) : (
+          <>
+            {pinnedChats.length > 0 && (
+              <Section>
+                <SectionTitle>Pinned Chats</SectionTitle>
+                {pinnedChats.map((chat) => (
+                  <ChatItem
+                    key={chat.id}
+                    $isActive={activeChat === chat.id}
+                    onClick={() => handleChatClick(chat.id)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    {chat.title}
+                  </ChatItem>
+                ))}
+              </Section>
+            )}
+
+            {recentChats.length > 0 && (
+              <Section>
+                <SectionTitle>Recent Chats</SectionTitle>
+                {recentChats.map((chat) => (
+                  <ChatItem
+                    key={chat.id}
+                    $isActive={activeChat === chat.id}
+                    onClick={() => handleChatClick(chat.id)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    {chat.title}
+                  </ChatItem>
+                ))}
+              </Section>
+            )}
+          </>
+        )}
 
         <div style={{ flex: 1 }} />
 

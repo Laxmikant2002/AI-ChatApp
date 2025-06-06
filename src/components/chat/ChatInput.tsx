@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import { useChat } from '../../context/ChatContext';
+import websocketService from '../../services/websocket';
+import { Message } from '../../types';
 
 const InputContainer = styled.div`
   position: sticky;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #ffffff;
+  background-color: ${({ theme }) => theme.background.primary};
   padding: 1rem 1.5rem 1.5rem;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid ${({ theme }) => theme.border.primary};
   z-index: 10;
   margin-top: auto;
 
@@ -19,7 +22,11 @@ const InputContainer = styled.div`
     left: 0;
     right: 0;
     height: 100px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    background: linear-gradient(
+      to top,
+      ${({ theme }) => theme.background.primary},
+      ${({ theme }) => `${theme.background.primary}00`}
+    );
     pointer-events: none;
   }
 
@@ -40,24 +47,31 @@ const InputWrapper = styled.div`
 const TextareaWrapper = styled.div`
   flex: 1;
   position: relative;
-  background-color: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 1rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background-color: ${({ theme }) => theme.background.primary};
+  border: 1px solid ${({ theme }) => theme.border.primary};
+  border-radius: var(--radius-xl);
+  transition: all ${({ theme }) => theme.animations.transition.base};
+  box-shadow: ${({ theme }) => theme.shadow.light};
 
   &:focus-within {
-    border-color: #2196f3;
-    box-shadow: 0 2px 12px rgba(33, 150, 243, 0.15);
+    border-color: ${({ theme }) => theme.text.accent};
+    box-shadow: ${({ theme }) => theme.shadow.medium};
+    transform: ${({ theme }) => theme.animations.scale.hover};
   }
 
   @keyframes expand {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   &.expanded {
-    animation: expand 0.2s ease-out;
+    animation: expand ${({ theme }) => theme.animations.transition.base};
   }
 `;
 
@@ -65,16 +79,17 @@ const MessageInput = styled.textarea`
   width: 100%;
   padding: 1rem 3rem;
   border: none;
-  border-radius: 1rem;
-  font-size: 1rem;
-  line-height: 1.5;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
   resize: none;
   min-height: 56px;
   max-height: 200px;
   background: transparent;
+  color: ${({ theme }) => theme.text.primary};
   font-family: inherit;
   overflow-y: auto;
-  transition: min-height 0.2s ease;
+  transition: min-height ${({ theme }) => theme.animations.transition.base};
 
   &.expanded {
     min-height: 100px;
@@ -85,7 +100,7 @@ const MessageInput = styled.textarea`
   }
 
   &::placeholder {
-    color: #6e6e80;
+    color: ${({ theme }) => theme.text.tertiary};
   }
 
   &::-webkit-scrollbar {
@@ -93,15 +108,15 @@ const MessageInput = styled.textarea`
   }
 
   &::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: ${({ theme }) => theme.background.secondary};
     border-radius: 3px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: ${({ theme }) => theme.border.primary};
     border-radius: 3px;
     &:hover {
-      background-color: rgba(0, 0, 0, 0.3);
+      background-color: ${({ theme }) => theme.border.secondary};
     }
   }
 `;
@@ -114,24 +129,35 @@ const ActionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6e6e80;
-  transition: all 0.2s ease;
-  border-radius: 0.5rem;
+  color: ${({ theme }) => theme.text.secondary};
+  transition: all ${({ theme }) => theme.animations.transition.base};
+  border-radius: var(--radius-base);
 
   &:hover {
-    color: #2196f3;
-    background-color: rgba(33, 150, 243, 0.1);
+    color: ${({ theme }) => theme.text.accent};
+    background-color: ${({ theme }) => theme.background.accent};
+    transform: ${({ theme }) => theme.animations.scale.hover};
+  }
+
+  &:active {
+    transform: ${({ theme }) => theme.animations.scale.tap};
   }
 
   &:disabled {
-    color: #ccc;
+    color: ${({ theme }) => theme.text.tertiary};
     cursor: not-allowed;
     background: none;
+    transform: none;
   }
 
   svg {
     width: 20px;
     height: 20px;
+    transition: transform ${({ theme }) => theme.animations.transition.base};
+  }
+
+  &:hover svg {
+    transform: ${({ theme }) => theme.animations.scale.hover};
   }
 `;
 
@@ -149,7 +175,7 @@ const SendButton = styled(ActionButton)`
   transform: translateY(-50%);
   
   &:not(:disabled) {
-    color: #2196f3;
+    color: ${({ theme }) => theme.text.accent};
   }
 `;
 
@@ -163,38 +189,48 @@ const HintText = styled.div<{ $visible: boolean }>`
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  font-size: 0.75rem;
-  color: #6e6e80;
-  background-color: rgba(255, 255, 255, 0.9);
+  font-size: var(--font-size-xs);
+  color: ${({ theme }) => theme.text.secondary};
+  background-color: ${({ theme }) => theme.background.primary + 'E6'};
   padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-base);
   opacity: ${props => props.$visible ? 1 : 0};
   visibility: ${props => props.$visible ? 'visible' : 'hidden'};
-  transition: all 0.2s ease;
+  transition: all ${({ theme }) => theme.animations.transition.base};
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: ${({ theme }) => theme.shadow.light};
   pointer-events: none;
+  backdrop-filter: blur(8px);
 `;
 
 const CharacterCount = styled.div<{ $nearLimit: boolean }>`
   position: absolute;
   right: 3.5rem;
   bottom: 0.5rem;
-  font-size: 0.75rem;
-  color: ${props => props.$nearLimit ? '#dc3545' : '#6e6e80'};
+  font-size: var(--font-size-xs);
+  color: ${props => props.$nearLimit ? '#dc3545' : props.theme.text.tertiary};
   opacity: 0.8;
+  transition: all ${({ theme }) => theme.animations.transition.base};
+
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 interface ChatInputProps {
-  onSend: (text: string) => void;
+  onSend: (message: string) => void;
   onFileUpload?: (file: File) => void;
+  disabled?: boolean;
   maxLength?: number;
 }
+
+const DEFAULT_MAX_LENGTH = 1000;
 
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSend, 
   onFileUpload,
-  maxLength = 4000 
+  disabled,
+  maxLength = DEFAULT_MAX_LENGTH
 }) => {
   const [inputText, setInputText] = useState('');
   const [rows, setRows] = useState(1);
@@ -202,6 +238,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [showHint, setShowHint] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { activeChat, addMessage } = useChat();
+
+  const characterCount = inputText.length;
+  const isNearLimit = characterCount > maxLength * 0.9;
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -215,8 +255,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, [inputText]);
 
   const handleSend = () => {
-    if (inputText.trim()) {
-      onSend(inputText.trim());
+    if (inputText.trim() && activeChat) {
+      const messageData: Omit<Message, 'id' | 'timestamp'> = {
+        text: inputText.trim(),
+        isUser: true,
+        type: 'message'
+      };
+
+      // Add message to local state
+      addMessage(activeChat, messageData);
+      
+      // Send message through WebSocket
+      websocketService.send(messageData);
+      
+      // Clear input
       setInputText('');
       if (textareaRef.current) {
         textareaRef.current.style.height = '56px';
@@ -226,12 +278,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    } else if (e.key === 'Enter' && e.shiftKey) {
-      setShowHint(false);
     }
   };
 
@@ -253,9 +303,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     fileInputRef.current?.click();
   };
 
-  const characterCount = inputText.length;
-  const isNearLimit = characterCount > maxLength * 0.9;
-
   return (
     <InputContainer>
       <InputWrapper>
@@ -267,6 +314,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onClick={handleUploadClick}
             title="Upload file"
             type="button"
+            disabled={disabled}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -283,6 +331,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder="Type your message..."
             rows={rows}
             maxLength={maxLength}
+            disabled={disabled}
             className={isExpanded ? 'expanded' : ''}
           />
           {characterCount > 0 && (
@@ -292,7 +341,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           )}
           <SendButton
             onClick={handleSend}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || disabled}
             title="Send message"
             type="button"
           >
@@ -306,10 +355,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept=".pdf,.doc,.docx,.txt,image/*"
+          disabled={disabled}
         />
       </InputWrapper>
     </InputContainer>
   );
 };
 
-export default ChatInput; 
+export default ChatInput;
