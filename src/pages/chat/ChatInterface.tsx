@@ -1,7 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useChat } from '../../context/ChatContext';
-import StartScreen from './StartScreen';
 import Message from '../../components/chat/Message';
 import ChatInput from '../../components/chat/ChatInput';
 
@@ -9,7 +8,7 @@ const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #ffffff;
+  background-color: ${({ theme }) => theme.background.primary};
   position: relative;
   overflow: hidden;
   padding-bottom: 80px;
@@ -30,12 +29,8 @@ const MessageList = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: ${({ theme }) => theme.border.primary};
     border-radius: 3px;
-  }
-
-  @media (min-width: 768px) {
-    padding: 2rem;
   }
 `;
 
@@ -53,50 +48,23 @@ const InputWrapper = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0));
+  background: linear-gradient(to top, ${({ theme }) => theme.background.primary} 50%, ${({ theme }) => theme.background.primary}00);
   padding: 1rem;
   z-index: 10;
 `;
 
-const ScrollButton = styled.button<{ isVisible: boolean }>`
-  position: fixed;
-  bottom: 100px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #2196f3;
-  color: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  opacity: ${props => props.isVisible ? 1 : 0};
-  visibility: ${props => props.isVisible ? 'visible' : 'hidden'};
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.35);
-  }
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  @media (max-width: 768px) {
-    bottom: 80px;
-    right: 16px;
-  }
+const ErrorMessage = styled.div`
+  color: ${({ theme }) => theme.colors.error};
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 `;
 
 const ChatInterface: React.FC = () => {
   const { activeChat, chats, addMessage } = useChat();
   const messageListRef = useRef<HTMLDivElement>(null);
-  const [showScrollButton, setShowScrollButton] = React.useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const scrollToBottom = () => {
     if (messageListRef.current) {
@@ -107,49 +75,61 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const handleScroll = () => {
-    if (messageListRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = messageListRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      setShowScrollButton(!isNearBottom);
-    }
-  };
-
   useEffect(() => {
     scrollToBottom();
-  }, [activeChat]);
+  }, [activeChat, chats]);
 
-  useEffect(() => {
-    const currentChat = chats.find(chat => chat.id === activeChat);
-    if (currentChat?.messages.length) {
-      scrollToBottom();
-    }
-  }, [chats, activeChat]);
-
-  const handleSendMessage = (text: string) => {
-    if (activeChat) {
-      addMessage(activeChat, {
-        text,
-        isUser: true,
-      });
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      if (activeChat) {
+        addMessage(activeChat, {
+          text,
+          isUser: true,
+        });
+      }
+    } catch (err) {
+      setError('Failed to send message. Please try again.');
+      console.error('Error sending message:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    console.log('File uploaded:', file);
-    // Handle file upload logic here
+  const handleFileUpload = async (file: File) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      if (activeChat) {
+        addMessage(activeChat, {
+          text: `File uploaded: ${file.name}`,
+          isUser: true,
+        });
+      }
+    } catch (err) {
+      setError('Failed to upload file. Please try again.');
+      console.error('Error uploading file:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  if (!activeChat) {
-    return <StartScreen />;
-  }
 
-  const currentChat = chats.find(chat => chat.id === activeChat);
+  const currentChat = chats.find(chat => chat.id === activeChat) || {
+    messages: []
+  };
 
   return (
     <ChatContainer>
-      <MessageList ref={messageListRef} onScroll={handleScroll}>
+      <MessageList ref={messageListRef}>
         <MessageWrapper>
-          {currentChat?.messages.map(message => (            <Message 
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+          {currentChat.messages.map(message => (
+            <Message 
               key={message.id}
               message={{
                 text: message.text,
@@ -160,23 +140,16 @@ const ChatInterface: React.FC = () => {
           ))}
         </MessageWrapper>
       </MessageList>
-      <ScrollButton 
-        isVisible={showScrollButton}
-        onClick={scrollToBottom}
-        title="Scroll to bottom"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </ScrollButton>
       <InputWrapper>
         <ChatInput 
           onSend={handleSendMessage}
           onFileUpload={handleFileUpload}
+          disabled={isLoading}
+          placeholder={activeChat ? "Type your message..." : "Select a chat to start messaging"}
         />
       </InputWrapper>
     </ChatContainer>
   );
 };
 
-export default ChatInterface; 
+export default ChatInterface;

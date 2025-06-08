@@ -5,8 +5,8 @@ export interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
+  type?: 'message' | 'error';
   file?: FileWithPreview;
-  type?: 'message' | 'error' | 'system';
 }
 
 export interface Chat {
@@ -15,6 +15,9 @@ export interface Chat {
   messages: Message[];
   isPinned: boolean;
   createdAt: Date;
+  lastMessage?: Message;
+  unreadCount: number;
+  lastActivity: Date;
 }
 
 export interface PDFFile {

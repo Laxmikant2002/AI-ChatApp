@@ -76,8 +76,11 @@ const NewChatButton = styled.button`
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.5rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: ${({ theme }) => theme.background.secondary}08;
+  border-radius: 0.5rem;
+  margin: 0.5rem;
 `;
 
 const SectionTitle = styled.h2`
@@ -88,6 +91,16 @@ const SectionTitle = styled.h2`
   padding: 0.5rem;
   margin-bottom: 0.25rem;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: ${({ theme }) => theme.border.primary};
+  }
 `;
 
 const ChatItem = styled.button<{ $isActive?: boolean }>`
@@ -96,7 +109,7 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
   gap: 0.75rem;
   padding: 0.75rem;
   background-color: ${props => props.$isActive ? props.theme.background.secondary : 'transparent'};
-  border: none;
+  border: 1px solid ${props => props.$isActive ? props.theme.border.primary : 'transparent'};
   border-radius: 0.5rem;
   cursor: pointer;
   text-align: left;
@@ -109,6 +122,7 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
 
   &:hover {
     background-color: ${({ theme }) => theme.background.secondary};
+    border-color: ${({ theme }) => theme.border.primary};
   }
 
   &::before {
@@ -116,28 +130,36 @@ const ChatItem = styled.button<{ $isActive?: boolean }>`
     position: absolute;
     left: 0;
     top: 50%;
-    height: 0;
+    height: ${props => props.$isActive ? '70%' : '0'};
     width: 3px;
     background-color: ${({ theme }) => theme.button.primary};
     transition: height 0.2s ease;
     transform: translateY(-50%);
   }
 
-  ${props => props.$isActive && `
-    &::before {
-      height: 70%;
-    }
-  `}
-
   svg {
     width: 16px;
     height: 16px;
     color: ${({ theme }) => theme.text.secondary};
+    flex-shrink: 0;
     transition: transform 0.2s ease;
   }
 
   &:hover svg {
     transform: scale(1.1);
+    color: ${({ theme }) => theme.text.primary};
+  }
+
+  .chat-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-meta {
+    font-size: 0.75rem;
+    color: ${({ theme }) => theme.text.tertiary};
   }
 `;
 
@@ -300,7 +322,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <>
             {pinnedChats.length > 0 && (
               <Section>
-                <SectionTitle>Pinned Chats</SectionTitle>
+                <SectionTitle>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                    <path d="M12 2L19 9V21H5V9L12 2Z" />
+                  </svg>
+                  Pinned Chats
+                </SectionTitle>
                 {pinnedChats.map((chat) => (
                   <ChatItem
                     key={chat.id}
@@ -310,7 +337,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
-                    {chat.title}
+                    <span className="chat-title">{chat.title}</span>
+                    <span className="chat-meta">
+                      {new Date(chat.createdAt).toLocaleDateString()}
+                    </span>
                   </ChatItem>
                 ))}
               </Section>
@@ -318,7 +348,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             {recentChats.length > 0 && (
               <Section>
-                <SectionTitle>Recent Chats</SectionTitle>
+                <SectionTitle>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Recent Chats
+                </SectionTitle>
                 {recentChats.map((chat) => (
                   <ChatItem
                     key={chat.id}
@@ -328,7 +364,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
-                    {chat.title}
+                    <span className="chat-title">{chat.title}</span>
+                    <span className="chat-meta">
+                      {new Date(chat.createdAt).toLocaleDateString()}
+                    </span>
                   </ChatItem>
                 ))}
               </Section>
@@ -341,6 +380,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <Divider />
 
         <Section>
+          <SectionTitle>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </SectionTitle>
           <SettingsButton onClick={clearChats}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

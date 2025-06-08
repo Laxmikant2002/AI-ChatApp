@@ -72,6 +72,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       messages: [],
       isPinned: false,
       createdAt: new Date(),
+      unreadCount: 0,
+      lastActivity: new Date()
     };
 
     setChats(prevChats => [newChat, ...prevChats]);
@@ -94,6 +96,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prevChats[chatIndex],
         messages: [...prevChats[chatIndex].messages, newMessage],
         title: prevChats[chatIndex].messages.length === 0 ? message.text.slice(0, 30) + '...' : prevChats[chatIndex].title,
+        lastMessage: newMessage,
+        lastActivity: new Date(),
+        unreadCount: activeChat === chatId ? 0 : prevChats[chatIndex].unreadCount + (message.isUser ? 0 : 1)
       };
 
       const newChats = [...prevChats];

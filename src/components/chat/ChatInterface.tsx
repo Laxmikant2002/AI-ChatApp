@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useChat } from '../../context/ChatContext';
 import websocketService from '../../services/websocket';
-import StartScreen from './StartScreen';
 import Message from './Message';
 import ChatInput from './ChatInput';
 import AnimatedTransition from '../common/AnimatedTransition';
@@ -86,6 +85,39 @@ const CloseButton = styled.button`
 
   &:hover {
     opacity: 1;
+  }
+`;
+
+const WelcomeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: ${({ theme }) => theme.text.secondary};
+`;
+
+const WelcomeTitle = styled.h2`
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.text.primary};
+`;
+
+const WelcomeText = styled.p`
+  font-size: 1rem;
+  max-width: 500px;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+`;
+
+const WelcomeIcon = styled.div`
+  margin-bottom: 2rem;
+  svg {
+    width: 64px;
+    height: 64px;
+    color: ${({ theme }) => theme.text.secondary};
   }
 `;
 
@@ -176,22 +208,34 @@ const ChatInterface: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  if (!activeChat) {
-    return <StartScreen />;
-  }
-
   return (
     <ChatContainer>
       <MessageList ref={messageListRef}>
-        <AnimatedTransition>          {activeMessages.map(message => (
-            <Message
-              key={message.id}
-              message={message}
-              isLoading={isLoading && message.isUser}
-            />
-          ))}
-          {isLoading && (
+        <AnimatedTransition>
+          {!activeChat ? (
+            <WelcomeContainer>
+              <WelcomeIcon>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <path d="M12 8v4m0 4h.01" />
+                </svg>
+              </WelcomeIcon>
+              <WelcomeTitle>Welcome to AI Chat</WelcomeTitle>
+              <WelcomeText>
+                Select a chat from the sidebar to start messaging or create a new chat to begin a conversation.
+                You can ask questions, get assistance, or explore various topics with AI.
+              </WelcomeText>
+            </WelcomeContainer>
+          ) : (
+            activeMessages.map(message => (
+              <Message
+                key={message.id}
+                message={message}
+                isLoading={isLoading && message.isUser}
+              />
+            ))
+          )}
+          {isLoading && activeChat && (
             <Message
               key="loading"
               message={{
@@ -214,7 +258,8 @@ const ChatInterface: React.FC = () => {
       <ChatInput
         onSend={handleSend}
         onFileUpload={handleFileUpload}
-        disabled={isLoading}
+        disabled={isLoading || !activeChat}
+        placeholder={activeChat ? "Type your message..." : "Select a chat to start messaging"}
       />
     </ChatContainer>
   );
